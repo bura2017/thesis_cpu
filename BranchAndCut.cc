@@ -21,7 +21,7 @@ static void memFree(Matrix &matrix) {
   std::cout << num_of_probs << " probs "<< std::endl;
 }
 
-void initMatrix(Matrix &matrix, const Matrix &input, taskTree * &task, Matrix &transition) {
+void initMatrix(Matrix &matrix, const Matrix &input, taskTree * &task) {
   //std::cout << "Init new matrix..." << std::endl;
   CHECK_NULL(task);
   matrix = input;
@@ -47,16 +47,15 @@ void initMatrix(Matrix &matrix, const Matrix &input, taskTree * &task, Matrix &t
     }
     cut_rows++;
   }
-  Matrix temp_matrix(cuts.rows, cuts.cols);
-  multip(cuts, transition, temp_matrix);
-  matrix.add_cuts(temp_matrix);
+  matrix.add_cuts(cuts);
 }
 
 bool branchAndCut (Matrix &input) {
   num_of_probs = 0;
 
-  Matrix transition(input.cols, input.cols);
-  if (cpuDualSimplex (input, transition) == 0) {
+  Matrix matrix (input, input.cols);
+
+  if (cpuDualSimplex (matrix) == 0) {
     std::cout << num_of_probs << std::endl;
     return false;
   }
@@ -64,12 +63,10 @@ bool branchAndCut (Matrix &input) {
   taskTree *root = new taskTree;
   orderList *start_order = new orderList (root);
 
-  if (root->branchPoint(input)) {
+  if (root->branchPoint(matrix)) {
     std::cout << num_of_probs << std::endl;
     return true;
   }
-
-  Matrix matrix (input, input.cols);
 
   while (1) {
     num_of_probs++;
@@ -80,7 +77,7 @@ bool branchAndCut (Matrix &input) {
     start_order->task->branchTask();
 
     for (int l = 0; l < NUM_OF_DAUGHT; l++) {
-      initMatrix (matrix, input, start_order->task->next[l], transition);
+      initMatrix (matrix, input, start_order->task->next[l]);
       if (cpuDualSimplex (matrix) == 0) {
         delete start_order->task->next[l];
       } else {
