@@ -15,7 +15,7 @@
 #ifndef BRANCHANDCUT_H_
 #define BRANCHANDCUT_H_
 
-#include <cstdio>
+#include <stdio.h>
 #include <assert.h>
 #include <float.h>
 #include <math.h>
@@ -23,8 +23,10 @@
 
 #include "DualSimplex.h"
 #include "Matrix.h"
+#include "Pseudocost.h"
+#include "Epsilon.h"
 
-#define MAX_NUM_OF_CUTS 500
+#define MAX_NUM_OF_CUTS 100
 #define NUM_OF_DAUGHT 2
 
 struct taskTree {
@@ -34,61 +36,15 @@ struct taskTree {
   double value;
   int num; //parent's daughter num
   int num_of_int;
+  double func;
+  double diff;
+  double *cuts;
 
-  taskTree (int point = 0, taskTree* prev = NULL, double value = 0, int num = 0, int num_of_int = -1) :
-    point(point), prev(prev), value(value), num(num), num_of_int(num_of_int) {
-    for (int i = 0; i < NUM_OF_DAUGHT; i++) {
-      next[i] = NULL;
-    }
-  }
-  void branchTask() {
-    for (int i = 0; i < NUM_OF_DAUGHT; i++) {
-      next[i] = new taskTree(0,this,0,i,-1);
-    }
-  }
-  int branchPoint(Matrix const &matrix) {
-    int branch_point = 0;
-    double val = 0.0;
-    int ints = 0;
-
-    int *fix_vals = new int[matrix.cols];
-    for (int i = 0; i < matrix.cols; i++) {
-      fix_vals[i] = 0;
-    }
-    for (taskTree *t = this; t != NULL; t = t->prev) {
-      fix_vals[t->point] = 1;
-    }
-
-    for (int i = 1; i < matrix.cols; i++){
-      val = matrix.e[i + 0 * matrix.m];
-      int c = cmp(val, round(val));
-      if ((c != 0) && (!branch_point) && (fix_vals[i] == 0)) {
-        branch_point = i;
-        val = floor(val);
-      }
-      if ((c == 0) || (fix_vals[i] == 1)) {
-        ints++;
-      }
-    }
-
-    if (branch_point == 0) {
-      return 1;
-    }
-
-    point = branch_point;
-    value = val;
-    num_of_int = ints;
-
-    delete [] fix_vals;
-
-    return 0;
-
-  }
-  ~taskTree () {
-    if (prev!=NULL) {
-      prev->next[num] = NULL;
-    }
-  }
+  taskTree (int point, taskTree* prev, double value, int num, int num_of_int = -1,
+      double func = 0.0, double diff = 0.0);
+  int branchTask(Matrix &matrix, pseudocost *cost);
+  int countInts(Matrix &matrix);
+  ~taskTree () ;
 };
 
 struct orderList {
@@ -96,26 +52,15 @@ struct orderList {
   orderList* next;
 
   orderList (taskTree *task, orderList *next = NULL) : task(task), next(next) {}
-  orderList *pasteTask (taskTree *task) {
-    orderList *order = new orderList (task);
-
-    if (task->num_of_int > this->task->num_of_int) {
-      order->next = this;
-      return order;
-    }
-    orderList *current = this;
-    while (current->next != NULL) {
-      if (current->next->task->num_of_int < task->num_of_int) {
-        break;
-      }
-      current = current->next;
-    }
-    order->next = current->next;
-    current->next = order;
-    return this;
-  }
+  orderList *pasteTask (taskTree *task) ;
 };
 
-bool branchAndCut (Matrix &input);
+int branchAndBound (Matrix &input);
+void initMatrix(Matrix &matrix, const Matrix &input, taskTree * &task, Matrix transition);
+
+int branchPoint(Matrix &matrix, int &point, double &val, double &diff_best);
+int branchPoint (Matrix &matrix, int &point, double &value, double &diff_best, pseudocost &cost);
+
+int mirCuts (Matrix &matrix, double *ineq);
 
 #endif /* BRANCHANDCUT_H_ */

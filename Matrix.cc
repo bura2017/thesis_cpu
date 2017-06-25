@@ -1,3 +1,4 @@
+
 #include "Matrix.h"
 #include <iostream>
 #include <fstream>
@@ -5,14 +6,15 @@
 #include <string.h>
 #include <cmath>
 #include "HandleError.h"
+#include "Epsilon.h"
 
 Matrix::Matrix (int rows, int cols, int supply) :
     rows(rows), cols(cols), supply(supply), m(rows + supply), e(new double[m * cols]) {
   if (rows == 0 || cols == 0) {
     CHECK_NULL(NULL);
   }
-  for (int j = 0; j < cols; j++) {
-    for (int i = 0; i < rows; i++) {
+  for (int j = 0; j < this->cols; j++) {
+    for (int i = 0; i < m; i++) {
       e[i + j * m] = 0.0;
     }
   }
@@ -34,8 +36,8 @@ Matrix::Matrix(char const *filename, int supply) : rows(0), cols(0), supply(supp
 
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
-      int num;
-      int den;
+      double num;
+      double den = 1.0;
       input >> num >> den;
       e[i + j * m] = (double) num / den;
     }
@@ -122,29 +124,3 @@ Matrix &Matrix::operator=(Matrix const &matrix) {
   }
   return *this;
 }
-
-void multip(Matrix const &left, Matrix const &right, Matrix &answ) {
-  CHECK_NULL(left.e);
-  CHECK_NULL(right.e);
-
-  if ((&left == &answ) || (&right == &answ)) {
-    ERROR ("answer matrix could't be changed");
-  }
-  if (left.cols != right.rows) {
-    ERROR("matrices couldn't be multiplied");
-  }
-  if ((answ.rows != left.rows) || (answ.cols != right.cols)) {
-    ERROR("reinit");
-  }
-  for (int j = 0; j < answ.cols; j++) {
-    for (int i = 0; i < answ.rows; i++) {
-      answ.e[i + j * answ.m] = 0.0;
-      for (int k = 0; k < left.cols; k ++){
-        answ.e[i + j * answ.m] += left.e[i + k * left.m] * right.e[k + j * right.m];
-
-      }
-    }
-  }
-}
-
-
